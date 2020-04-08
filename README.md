@@ -1,6 +1,7 @@
-![](aviary.svg =250x)
+<img alt="aviary.sh" src="aviary.svg" height=48>
 
-# aviary.sh
+***
+###
 
 Minimal distributed configuration management in bash
 
