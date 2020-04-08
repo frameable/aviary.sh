@@ -6,7 +6,7 @@
 Minimal distributed configuration management in bash
 
 ```
-$ av apply
+$ sudo av apply
 Fetching inventory...
 Applying module nginx
 Applying module memcached
