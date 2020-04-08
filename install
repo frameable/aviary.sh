@@ -26,7 +26,7 @@ fi
 echo Installing to ${INSTALL_PATH}...
 mkdir -p ${INSTALL_PATH}/aviary
 curl $RELEASE_URL | tar --strip-components=1 -C ${INSTALL_PATH}/aviary -xz
-ln -s /var/lib/aviary/av /usr/bin/av
+ln -sf /var/lib/aviary/av /usr/bin/av
 
 echo Adding entry to /etc/crontab...
 echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
