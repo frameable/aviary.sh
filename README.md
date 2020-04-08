@@ -39,9 +39,11 @@ Configure your inventory if you don't have one yet:
 ```bash
 mkdir inventory
 cd inventory
-mkdir roles modules hosts
+mkdir {hosts,modules,roles}
+touch {hosts,modules,roles}/.gitkeep
 git init
-git commit -a -m "initial commit"
+git add .
+git commit -m "initial commit"
 ```
 
 Configure and push your repo to an origin:
@@ -56,7 +58,7 @@ Set your inventory url in config:
 ```bash
 echo inventory_git_url=$my_origin_url >> /var/lib/aviary/config
 ```
-Of course the dealings with git will be non-interactive, so you need to either set up ssh keys or access tokens in order to make that work.  In GitHub for example, find "Personal Access Tokens" under your account settings.  Once you have an access token, you can include it in the git url, e.g., `https://<access_token>@github.com/organization/aviary-inventory.git`
+Of course the dealings with git will be non-interactive, so you need to either set up ssh keys or access tokens in order to make that work.  In GitHub for example, find "Personal Access Tokens" under your account settings.  Once you have an access token, you can include it in the git url, e.g., `https://<username>:<access_token>@github.com/organization/aviary-inventory.git`
 
 
 #### Modules
@@ -67,7 +69,7 @@ Add our first module:
 mkdir modules/motd
 ```
 
-Create an idempotent script to configure the message of the day that users will see when they log in to this box.  In the inventory, create `modules/motd/apply` with these contents:
+Create an idempotent script to configure the message-of-the-day that users will see when they log in to this box.  In the inventory, create `modules/motd/apply` with these contents:
 
 ```bash
 # inventory/modules/motd/apply
@@ -80,11 +82,11 @@ EOF
 Now create this host in the inventory, and add the motd module to be applied:
 
 ```bash
-mkdir hosts/($hostname)
-echo motd > hosts/($hostname)/modules
+mkdir hosts/$(hostname)
+echo motd > hosts/$(hostname)/modules
 ```
 
-It's usually better practice to apply roles (essentially role-specific sets of modules) to hosts, but you can also apply ad-hoc modules directly if you like, as we're doing here.
+It's usually better practice to apply roles (sets of modules) to hosts, but you can also apply ad-hoc modules directly if you like, as we're doing here.
 
 Now check in these contents and push them up to the inventory repo.
 
