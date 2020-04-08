@@ -5,11 +5,14 @@ set -euo pipefail
 VERSION=1.0.0
 INSTALL_PATH=/var/lib
 AV_PATH=$INSTALL_PATH/aviary/av
-RELEASE_URL=https://aviary.sh/releases/aviary-${VERSION}.tar.gz
+RELEASE_URL=https://gitlab.com/dchester/aviary.sh/-/archive/${VERSION}/aviary.sh-${VERSION}.tar.gz
 INVENTORY_GIT_URL=${1:-""}
 
 # check for git dependency
-/usr/bin/which git || echo "Please install git and try again" && exit 1
+if ! /usr/bin/which git; then
+  echo "Please install git and try again"
+  exit 1
+fi
 
 if [[ -z "$INVENTORY_GIT_URL" ]]; then
   echo "Installing with no inventory git url; set later in $INSTALL_PATH/aviary/config"
@@ -21,12 +24,12 @@ if [[ -e /var/lib/aviary ]]; then
 fi
 
 echo Installing to ${INSTALL_PATH}...
-curl $RELEASE_URL > /tmp/aviary.tar.gz
-tar -C /var/lib -xzf /tmp/aviary.tar.gz
+mkdir -p ${INSTALL_PATH}/aviary
+curl $RELEASE_URL | tar --strip-components=1 -C ${INSTALL_PATH}/aviary -xz
+ln -s /var/lib/aviary/av /usr/bin/av
 
 echo Adding entry to /etc/crontab...
 echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
-echo "$(( RANDOM % 60 )) * * * * $AV_PATH fetch && $AV_PATH apply > /var/log/aviary.log 2>&1" >> /etc/crontab
+echo "$(( RANDOM % 60 )) * * * * $AV_PATH apply > /var/log/aviary.log 2>&1" >> /etc/crontab
 
-
-echo Done.
+echo Done
