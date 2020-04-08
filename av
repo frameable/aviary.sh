@@ -10,6 +10,8 @@ lib=$(dirname $(readlink -f $0))
 source $lib/config
 source $lib/log
 
+log_level info
+
 cd $aviary_root
 
 version=0.5.0
@@ -105,13 +107,12 @@ function identify {
   fi
 
   # identify our roles
-  roles=$(cat inventory/hosts/$(hostname)/roles)
+  roles=$(grep -hs ^ inventory/hosts/$(hostname)/roles || true)
   roles_pattern={${roles//$'\n'/,}}
-  hostname=$(hostname)
-
   log_debug applying roles $roles
 
   # identify unique modules in order
+  hostname=$(hostname)
   modules=$(eval "{ grep -hs ^ inventory/hosts/$hostname/modules inventory/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
 }
 
@@ -129,12 +130,12 @@ function check_inventory {
 
 function fetch_inventory {
   if [[ -z "$no_fetch" ]]; then
-    log_info "fetching inventory"
+    log_info "Fetching inventory"
     git -C $inventory_dir pull || git clone $inventory_git_url $inventory_dir
-    git -C $inventory_dir reset --hard
-    git -C $inventory_dir clean -fd
+    git -C $inventory_dir reset --hard > /dev/null
+    git -C $inventory_dir clean -fd > /dev/null
   else 
-    log_info "not fetching inventory"
+    log_info "Not fetching inventory"
   fi
 }
 
@@ -165,6 +166,7 @@ case $command in
     else
       touch $lock_file
     fi
+
     # apply modules
     log_info Running apply
     for module in $modules; do
@@ -182,7 +184,7 @@ case $command in
     fetch_inventory
     identify
     echo hostname: $(hostname)
-    echo roles: $roles
+    echo roles: ${roles:-'<none>'}
     echo modules: $modules
     echo
     [[ ! -e $status_file ]] && echo 'STATUS UNKNOWN' > $status_file
