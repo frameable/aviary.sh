@@ -24,7 +24,7 @@ LS_VERSION=0.3
 
 LS_OUTPUT=${LS_OUTPUT:-/dev/stdout}
 # XXX need more flexible templating, currently manual padding for level names
-LS_DEFAULT_FMT=${LS_DEFAULT_FMT:-'$TS | $_LS_LEVEL_STR | ${FUNCNAME[1]}:${BASH_LINENO[0]} |'}
+LS_DEFAULT_FMT=${LS_DEFAULT_FMT:-'$TS | $_LS_LEVEL_STR |'}
 
 LS_TRACE_LEVEL=0
 LS_DEBUG_LEVEL=10
