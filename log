@@ -62,11 +62,11 @@ function log_level {
 # LS_LEVELS structure:
 # Level, Level Name, Level Format, Before Log Entry, After Log Entry
 LS_LEVELS=(
-  $LS_DEBUG_LEVEL    'DEBUG' "$LS_DEFAULT_FMT" "\e[1;34m"    "\e[0m"
-  $LS_INFO_LEVEL     'INFO' "$LS_DEFAULT_FMT" "\e[1;32m"    "\e[0m"
-  $LS_WARNING_LEVEL  'WARNING' "$LS_DEFAULT_FMT" "\e[1;33m"    "\e[0m"
-  $LS_ERROR_LEVEL    'ERROR' "$LS_DEFAULT_FMT" "\e[1;31m"    "\e[0m"
-  $LS_CRITICAL_LEVEL 'CRITICAL' "$LS_DEFAULT_FMT" "\e[1;37;41m" "\e[0m"
+  $LS_DEBUG_LEVEL    'DEBUG' "$LS_DEFAULT_FMT" "\e[34m"    "\e[0m"
+  $LS_INFO_LEVEL     'INFO' "$LS_DEFAULT_FMT" "\e[32m"    "\e[0m"
+  $LS_WARNING_LEVEL  'WARNING' "$LS_DEFAULT_FMT" "\e[33m"    "\e[0m"
+  $LS_ERROR_LEVEL    'ERROR' "$LS_DEFAULT_FMT" "\e[31m"    "\e[0m"
+  $LS_CRITICAL_LEVEL 'CRITICAL' "$LS_DEFAULT_FMT" "\e[37;41m" "\e[0m"
 )
 
 _LS_FIND_LEVEL_STR () {
