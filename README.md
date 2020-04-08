@@ -1,6 +1,6 @@
 # aviary.sh
 
-Distributed configuration management in bash
+Minimal distributed configuration management in bash
 
 ```
 $ av apply
@@ -63,7 +63,7 @@ Of course the dealings with git will be non-interactive, so you need to either s
 
 Add our first module:
 
-```
+```bash
 mkdir modules/motd
 ```
 
@@ -114,7 +114,7 @@ In order to make configuration files dynamic, we can use template files and vari
 
 Let's spruce up our `motd` module.  In the inventory, let's add a template in `modules/motd`:
 
-```
+```bash
 # inventory/modules/motd/motd.template
 
 Welcome to {{ hostname }}
@@ -125,14 +125,15 @@ Welcome to {{ hostname }}
 
 Set the `hostname` variable in a `variables` file:
 
-```
+```bash
 # inventory/modules/motd/variables
+
 hostname=$(hostname)
 ```
 
 Set the `apply` script to interpolate the template:
 
-```
+```bash
 # inventory/modules/motd/apply
 
 source template
