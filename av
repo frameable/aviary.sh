@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export LOG_LEVEL=${LOG_LEVEL:-info}
+export GIT_TERMINAL_PROMPT=0
+
+lib=$(dirname $(readlink -f $0))
+
+source $lib/config
+source $lib/log
+
+cd $aviary_root
+
+version=0.5.0
+lock_file=$lib/.lock
+pause_file=$lib/.pause
+status_file=$lib/.status
+
+force=""
+command=""
+command_arg=""
+no_fetch=""
+
+function usage {
+  cat <<EOF
+av - manage configuration for your hosts
+
+Usage:
+  av [options] [command] [command-args]
+
+Options:
+  --help                   Show this help message
+  --version                Show version
+  --log-level <level>      Set the log level (trace,debug,info,warn,critical) [default: info]
+  --force                  Run even if a pause or run lock is set
+  --no-fetch               Don't fetch the inventory
+
+Commands:
+  status                   Report the status of the last run of \`apply\` [default]
+  fetch                    Update local database by fetching from upstream
+  apply                    Apply roles and their associated modules on this host 
+  recover                  Reset run lock file after a failure
+  pause                    Set the pause lock to avoid periodic runs while debugging
+  resume                   Resume periodic runs after a pause
+EOF
+}
+
+function version {
+  echo $version
+}
+
+function handle_err {
+  local _ec="$?"
+  local _cmd="${BASH_COMMAND:-unknown}"
+  log_error "The command \`${_cmd}\` exited with exit code ${_ec}"
+}
+
+function handle_exit {
+  if (($? != 0)); then
+    status FAIL
+  fi 
+}
+
+function status {
+  local date=$(date +'%Y-%m-%d %H:%M:%S')
+  echo $date STATUS $1 > $status_file 
+}
+
+function apply_module {
+  local module=$1
+  local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
+  log_info Applying module $module
+  bash $opts inventory/modules/$module/apply | log_debug 2>&1
+}
+
+# parse command line arguments
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --force) force=1;;
+    --no-fetch) no_fetch=1;;
+    --help) usage && exit;;
+    --version) version && exit;;
+    --log-level) shift && log_level $1;;
+    *)
+      if [[ -z "$command" ]]; then 
+        command=$1
+      elif [[ -z "$command_arg" ]]; then
+        command_arg=$1
+      fi
+      ;;
+  esac
+  shift
+done
+
+[[ -z "$command" ]] && command=status
+
+function identify {
+
+  if [[ ! -d inventory/hosts/$(hostname) ]]; then
+    log_error "couldn't find host $(hostname) in inventory"
+    exit 1
+  fi
+
+  # identify our roles
+  roles=$(cat inventory/hosts/$(hostname)/roles)
+  roles_pattern={${roles//$'\n'/,}}
+  hostname=$(hostname)
+
+  log_debug applying roles $roles
+
+  # identify unique modules in order
+  modules=$(eval "{ grep -hs ^ inventory/hosts/$hostname/modules inventory/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
+}
+
+function check_inventory {
+  if [[ ! -e $inventory_dir ]]; then
+    echo "missing inventory > try running \`av fetch\`"
+  fi
+}
+
+function fetch_inventory {
+  if [[ -z "$no_fetch" ]]; then
+    log_info "fetching inventory"
+    git -C $inventory_dir pull || git clone $inventory_git_url $inventory_dir
+    git -C $inventory_dir reset --hard
+    git -C $inventory_dir clean -fd
+  else 
+    log_info "not fetching inventory"
+  fi
+}
+
+case $command in
+
+  version)
+    echo $version
+  ;;
+
+  apply)
+    trap handle_exit EXIT
+    trap handle_err ERR
+
+    check_inventory
+    fetch_inventory
+    identify
+
+    # consult pause file
+    if [[ -e $pause_file && ! $force ]]; then
+      log_warn 'bailing for pause lock file'
+      exit 1 
+    fi
+
+    # set up our lock file
+    if [[ -e $lock_file && ! $force ]]; then
+      log_error 'bailing for run lock file'
+      exit 1
+    else
+      touch $lock_file
+    fi
+    # apply modules
+    log_info Running apply
+    for module in $modules; do
+      apply_module $module
+    done
+
+    rm $lock_file
+    status OK
+    log_info 'Done'
+    ;;
+
+  status)
+    # list out what we would do
+    fetch_inventory
+    identify
+    echo hostname: $(hostname)
+    echo roles: $roles
+    echo modules: $modules
+    echo
+    [[ ! -e $status_file ]] && echo 'STATUS UNKNOWN' > $status_file
+    cat $status_file
+    echo 
+    [[ -e $lock_file ]] && echo '-- Run lock is set; clear with `av recover` --'
+    [[ -e $pause_file ]] && echo '-- Pause lock is set; clear with `av resume` --'
+    ;;
+
+  fetch)
+    # get our repo updated
+    fetch_inventory
+    ;;
+
+  recover)
+    # get our repo updated
+    rm $lock_file
+    ;;
+
+  resume)
+    # get our repo updated
+    rm $pause_file
+    ;;
+
+  pause)
+    # get our repo updated
+    touch $pause_file
+    ;;
+
+  *)
+    log_error unknown command $command
+    ;;
+
+esac
+
