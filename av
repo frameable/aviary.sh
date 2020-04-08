@@ -22,6 +22,8 @@ command=""
 command_arg=""
 no_fetch=""
 
+inventory_git_url=${inventory_git_url:-}
+
 function usage {
   cat <<EOF
 av - manage configuration for your hosts
@@ -114,8 +116,14 @@ function identify {
 }
 
 function check_inventory {
+  if [[ -z "$inventory_git_url" ]]; then
+    log_error "no inventory_git_url configred in $lib/config"
+    exit 1
+  fi
+
   if [[ ! -e $inventory_dir ]]; then
-    echo "missing inventory > try running \`av fetch\`"
+    log_error "couldn't find inventory at $inventory_dir"
+    exit 1
   fi
 }
 
@@ -170,6 +178,7 @@ case $command in
 
   status)
     # list out what we would do
+    check_inventory
     fetch_inventory
     identify
     echo hostname: $(hostname)
@@ -185,6 +194,7 @@ case $command in
 
   fetch)
     # get our repo updated
+    check_inventory
     fetch_inventory
     ;;
 
