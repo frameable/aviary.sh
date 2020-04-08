@@ -1,3 +1,5 @@
+![](aviary.svg =250x)
+
 # aviary.sh
 
 Minimal distributed configuration management in bash
