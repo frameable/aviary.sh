@@ -147,6 +147,23 @@ source variables
 template $(dirname $0)/motd.template > /etc/motd
 ```
 
+Looking at our inventory directory structure, we should see something like this:
+
+```
+inventory
+├── hosts
+│   └── my-host-01
+│       └── modules
+├── modules
+│   └── motd
+│       ├── apply
+│       ├── motd.template
+│       └── variables
+└── roles
+```
+
+From here, add more modules, group modules into roles, and apply roles to your hosts, similarly to how we did with this first module.
+
 
 ## Concepts
 
