@@ -36,6 +36,6 @@ fi
 
 echo Adding entry to /etc/crontab...
 echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
-echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply > /var/log/aviary.log 2>&1" >> /etc/crontab
+echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply >> /var/log/aviary.log 2>&1" >> /etc/crontab
 
 echo Done
