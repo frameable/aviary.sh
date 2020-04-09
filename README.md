@@ -204,6 +204,7 @@ Options:
 
 Commands:
   status                   Report the status of the last run of `apply` [default]
+  host <action>            Perform actions specific to the current host; more below
   fetch                    Update local database by fetching from upstream
   apply                    Fetch and apply roles and their associated modules on this host 
   recover                  Reset run lock file after a failure
