@@ -31,7 +31,7 @@ Each host periodically fetches the latest version of the inventory to see what r
 Install from the command line, on a box to be managed by aviary.sh:
 
 ```bash
-curl aviary.sh/install | sudo bash
+curl https://aviary.sh/install | sudo bash
 ```
 
 
