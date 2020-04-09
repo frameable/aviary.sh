@@ -144,7 +144,7 @@ Set the `apply` script to interpolate the template:
 source template
 source variables
 
-template motd.template > /etc/motd
+template $(dirname $0)/motd.template > /etc/motd
 ```
 
 

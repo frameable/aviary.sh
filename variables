@@ -1,5 +1,5 @@
 # read global variables
-source inventory/variables
+[[ -e $inventory_dir/variables ]] && source $inventory_dir/variables
 
 # read caller variables from the module
 read -r _ caller_path <<< $(caller)
