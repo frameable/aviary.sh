@@ -12,8 +12,7 @@ source $lib/log
 
 log_level info
 
-
-version=0.5.0
+version=1.1.0
 lock_file=$lib/.lock
 pause_file=$lib/.pause
 status_file=$lib/.status
