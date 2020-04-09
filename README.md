@@ -3,7 +3,7 @@
 ***
 ###
 
-Minimal distributed configuration management in bash
+Minimal distributed configuration management in bash.  Tiny alternative to chef / puppet / etc.
 
 ```
 $ sudo av apply
