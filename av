@@ -90,7 +90,7 @@ while [[ "$#" -gt 0 ]]; do
       if [[ -z "$command" ]]; then 
         command=$1
       elif [[ -z "$command_arg" ]]; then
-        command_arg=$1
+        command_arg=$@
       fi
       ;;
   esac
@@ -108,11 +108,12 @@ function identify {
 
   # identify our roles
   roles=$(grep -hs ^ inventory/hosts/$(hostname)/roles || true)
-  roles_pattern={${roles//$'\n'/,}}
+  roles_pattern={${roles//$'\n'/,},}
+  hostname=$(hostname)
+
   log_debug applying roles $roles
 
   # identify unique modules in order
-  hostname=$(hostname)
   modules=$(eval "{ grep -hs ^ inventory/hosts/$hostname/modules inventory/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
 }
 
@@ -130,13 +131,54 @@ function check_inventory {
 
 function fetch_inventory {
   if [[ -z "$no_fetch" ]]; then
+    check_inventory
     log_info "Fetching inventory"
-    git -C $inventory_dir pull || git clone $inventory_git_url $inventory_dir
-    git -C $inventory_dir reset --hard > /dev/null
-    git -C $inventory_dir clean -fd > /dev/null
+    git -C $inventory_dir pull > /dev/null || git clone $inventory_git_url $inventory_dir > /dev/null
+    git -C $inventory_dir reset --hard
+    git -C $inventory_dir clean -fd
   else 
     log_info "Not fetching inventory"
   fi
+}
+
+function host_remove_module {
+  local module=$1
+  local modules_file=inventory/hosts/$(hostname)/modules
+  echo "$(cat $modules_file | grep -v $subcommand_arg)" > $modules_file
+}
+
+function host_add_module {
+  local module=$1
+  local modules_file=inventory/hosts/$(hostname)/modules
+
+  if [[ -z "$(ls inventory/modules | grep $module)" ]]; then
+    log_error "couldn't find module $module"
+    exit 1
+  fi
+
+  mkdir -p inventory/hosts/$(hostname)
+  host_remove_module $module
+  echo $module >> $modules_file
+}
+
+function host_remove_role {
+  local role=$1
+  local roles_file=inventory/hosts/$(hostname)/roles
+  echo "$(cat $roles_file | grep -v $subcommand_arg)" > $roles_file
+}
+
+function host_add_role {
+  local role=$1
+  local roles_file=inventory/hosts/$(hostname)/roles
+
+  if [[ -z "$(ls inventory/roles | grep $role)" ]]; then
+    log_error "couldn't find module $role"
+    exit 1
+  fi
+
+  mkdir -p inventory/hosts/$(hostname)
+  host_remove_module $role
+  echo $role >> $roles_file
 }
 
 case $command in
@@ -149,7 +191,6 @@ case $command in
     trap handle_exit EXIT
     trap handle_err ERR
 
-    check_inventory
     fetch_inventory
     identify
 
@@ -166,7 +207,6 @@ case $command in
     else
       touch $lock_file
     fi
-
     # apply modules
     log_info Running apply
     for module in $modules; do
@@ -180,12 +220,11 @@ case $command in
 
   status)
     # list out what we would do
-    check_inventory
     fetch_inventory
     identify
     echo hostname: $(hostname)
     echo roles: ${roles:-'<none>'}
-    echo modules: $modules
+    echo modules: ${modules:-'<none>'}
     echo
     [[ ! -e $status_file ]] && echo 'STATUS UNKNOWN' > $status_file
     cat $status_file
@@ -194,9 +233,47 @@ case $command in
     [[ -e $pause_file ]] && echo '-- Pause lock is set; clear with `av resume` --'
     ;;
 
+  hosts)
+    fetch_inventory
+    ls -1 inventory/hosts
+    ;;
+
+  modules)
+    fetch_inventory
+    ls -1 inventory/modules
+    ;;
+
+  roles)
+    fetch_inventory
+    ls -1 inventory/roles
+    ;;
+
+  host)
+    fetch_inventory
+    read subcommand subcommand_arg <<< $command_arg
+
+    case $subcommand in
+      add)
+        mkdir inventory/$(hostname)
+        touch inventory/$(hostname)/.gitkeep
+        ;;
+      add-module)
+        host_add_module $subcommand_arg
+        ;;
+      remove-module)
+        host_remove_module $subcommand_arg
+        ;;
+      add-role)
+        host_add_role $subcommand_arg
+        ;;
+      remove-role)
+        host_remove_role $subcommand_arg
+        ;;
+    esac
+    ;;
+
   fetch)
     # get our repo updated
-    check_inventory
     fetch_inventory
     ;;
 
