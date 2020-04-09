@@ -12,7 +12,6 @@ source $lib/log
 
 log_level info
 
-cd $aviary_root
 
 version=0.5.0
 lock_file=$lib/.lock
@@ -23,6 +22,7 @@ force=""
 command=""
 command_arg=""
 no_fetch=""
+local_inventory=""
 
 inventory_git_url=${inventory_git_url:-}
 
@@ -37,16 +37,27 @@ Options:
   --help                   Show this help message
   --version                Show version
   --log-level <level>      Set the log level (trace,debug,info,warn,critical) [default: info]
+  --inventory <path>       Use a local inventory at the specified path
+  --no-fetch               Don't fetch the inventory before running the command
   --force                  Run even if a pause or run lock is set
-  --no-fetch               Don't fetch the inventory
 
 Commands:
   status                   Report the status of the last run of \`apply\` [default]
+  host <action>            Perform actions specific to the current host; more below
   fetch                    Update local database by fetching from upstream
   apply                    Apply roles and their associated modules on this host 
   recover                  Reset run lock file after a failure
   pause                    Set the pause lock to avoid periodic runs while debugging
   resume                   Resume periodic runs after a pause
+
+Host actions:
+  host add                      Add the current host to the inventory
+  host add-module <module>      Add the module to this host in the inventory
+  host remove-module <module>   Remove the module from this host in the inventory
+  host add-role <role>          Add the role to this host in the inventory
+  host remove-role <role>       Remove the role from this host in the inventory
+  host diff                     See what has changed in the local inventory
+  host push                     Push local inventory changes up to the git origin
 EOF
 }
 
@@ -75,7 +86,7 @@ function apply_module {
   local module=$1
   local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
   log_info Applying module $module
-  bash $opts inventory/modules/$module/apply | log_debug 2>&1
+  bash $opts $inventory_dir/modules/$module/apply | log_debug 2>&1
 }
 
 # parse command line arguments
@@ -86,6 +97,8 @@ while [[ "$#" -gt 0 ]]; do
     --help) usage && exit;;
     --version) version && exit;;
     --log-level) shift && log_level $1;;
+    --inventory) shift && no_fetch=1 && local_inventory=$(readlink -f $1);;
+
     *)
       if [[ -z "$command" ]]; then 
         command=$1
@@ -97,86 +110,90 @@ while [[ "$#" -gt 0 ]]; do
   shift
 done
 
+cd $aviary_root
+[[ ! -z "$local_inventory" ]] && inventory_dir=$local_inventory
 [[ -z "$command" ]] && command=status
 
 function identify {
 
-  if [[ ! -d inventory/hosts/$(hostname) ]]; then
-    log_error "couldn't find host $(hostname) in inventory"
+  if [[ ! -d $inventory_dir/hosts/$(hostname) ]]; then
+    log_error "Couldn't find host $(hostname) in inventory"
     exit 1
   fi
 
   # identify our roles
-  roles=$(grep -hs ^ inventory/hosts/$(hostname)/roles || true)
+  roles=$(grep -hs ^ $inventory_dir/hosts/$(hostname)/roles || true)
   roles_pattern={${roles//$'\n'/,},}
   hostname=$(hostname)
 
   log_debug applying roles $roles
 
   # identify unique modules in order
-  modules=$(eval "{ grep -hs ^ inventory/hosts/$hostname/modules inventory/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
+  modules=$(eval "{ grep -hs ^ $inventory_dir/hosts/$hostname/modules $inventory_dir/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
 }
 
 function check_inventory {
   if [[ -z "$inventory_git_url" ]]; then
-    log_error "no inventory_git_url configred in $lib/config"
+    log_error "No inventory_git_url configured in $lib/config"
     exit 1
   fi
 
   if [[ ! -e $inventory_dir ]]; then
-    log_error "couldn't find inventory at $inventory_dir"
+    log_error "Couldn't find inventory at $inventory_dir"
     exit 1
   fi
 }
 
 function fetch_inventory {
-  if [[ -z "$no_fetch" ]]; then
+  if [[ ! -z "$local_inventory" ]]; then
+    log_info "Using local inventory $(readlink -f $local_inventory)"
+  elif [[ ! -z "$no_fetch" ]]; then
+    log_info "Not fetching inventory"
+  else
     check_inventory
     log_info "Fetching inventory"
-    git -C $inventory_dir pull > /dev/null || git clone $inventory_git_url $inventory_dir > /dev/null
-    git -C $inventory_dir reset --hard
-    git -C $inventory_dir clean -fd
-  else 
-    log_info "Not fetching inventory"
+    timeout 60 git -C $inventory_dir pull > /dev/null || timeout 60 git clone $inventory_git_url $inventory_dir > /dev/null
+    git -C $inventory_dir reset --hard > /dev/null
+    git -C $inventory_dir clean -fd > /dev/null
   fi
 }
 
 function host_remove_module {
   local module=$1
-  local modules_file=inventory/hosts/$(hostname)/modules
+  local modules_file=$inventory_dir/hosts/$(hostname)/modules
   echo "$(cat $modules_file | grep -v $subcommand_arg)" > $modules_file
 }
 
 function host_add_module {
   local module=$1
-  local modules_file=inventory/hosts/$(hostname)/modules
+  local modules_file=$inventory_dir/hosts/$(hostname)/modules
 
-  if [[ -z "$(ls inventory/modules | grep $module)" ]]; then
+  if [[ -z "$(ls $inventory_dir/modules | grep $module)" ]]; then
     log_error "couldn't find module $module"
     exit 1
   fi
 
-  mkdir -p inventory/hosts/$(hostname)
+  mkdir -p $inventory_dir/hosts/$(hostname)
   host_remove_module $module
   echo $module >> $modules_file
 }
 
 function host_remove_role {
   local role=$1
-  local roles_file=inventory/hosts/$(hostname)/roles
+  local roles_file=$inventory_dir/hosts/$(hostname)/roles
   echo "$(cat $roles_file | grep -v $subcommand_arg)" > $roles_file
 }
 
 function host_add_role {
   local role=$1
-  local roles_file=inventory/hosts/$(hostname)/roles
+  local roles_file=$inventory_dir/hosts/$(hostname)/roles
 
-  if [[ -z "$(ls inventory/roles | grep $role)" ]]; then
-    log_error "couldn't find module $role"
+  if [[ -z "$(ls $inventory_dir/roles | grep $role)" ]]; then
+    log_error "Couldn't find module $role"
     exit 1
   fi
 
-  mkdir -p inventory/hosts/$(hostname)
+  mkdir -p $inventory_dir/hosts/$(hostname)
   host_remove_module $role
   echo $role >> $roles_file
 }
@@ -196,13 +213,13 @@ case $command in
 
     # consult pause file
     if [[ -e $pause_file && ! $force ]]; then
-      log_warn 'bailing for pause lock file'
+      log_warn 'Bailing for pause lock file'
       exit 1 
     fi
 
     # set up our lock file
     if [[ -e $lock_file && ! $force ]]; then
-      log_error 'bailing for run lock file'
+      log_error 'Bailing for run lock file'
       exit 1
     else
       touch $lock_file
@@ -222,6 +239,9 @@ case $command in
     # list out what we would do
     fetch_inventory
     identify
+
+    echo Using inventory $inventory_dir
+    echo
     echo hostname: $(hostname)
     echo roles: ${roles:-'<none>'}
     echo modules: ${modules:-'<none>'}
@@ -235,17 +255,17 @@ case $command in
 
   hosts)
     fetch_inventory
-    ls -1 inventory/hosts
+    ls -1 $inventory_dir/hosts
     ;;
 
   modules)
     fetch_inventory
-    ls -1 inventory/modules
+    ls -1 $inventory_dir/modules
     ;;
 
   roles)
     fetch_inventory
-    ls -1 inventory/roles
+    ls -1 $inventory_dir/roles
     ;;
 
   host)
@@ -254,8 +274,8 @@ case $command in
 
     case $subcommand in
       add)
-        mkdir inventory/$(hostname)
-        touch inventory/$(hostname)/.gitkeep
+        mkdir $inventory_dir/$(hostname)
+        touch $inventory_dir/$(hostname)/.gitkeep
         ;;
       add-module)
         host_add_module $subcommand_arg
@@ -268,6 +288,12 @@ case $command in
         ;;
       remove-role)
         host_remove_role $subcommand_arg
+        ;;
+      diff)
+        git -C $inventory_dir diff
+        ;;
+      push)
+        git -C $inventory_dir push
         ;;
     esac
     ;;
