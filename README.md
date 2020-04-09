@@ -209,7 +209,13 @@ Commands:
   recover                  Reset run lock file after a failure
   pause                    Set the pause lock to avoid periodic runs while debugging
   resume                   Resume periodic runs after a pause
+
+Host actions:
+  host add                      Add the current host to the inventory
+  host add-module <module>      Add the module to this host in the inventory
+  host remove-module <module>   Remove the module from this host in the inventory
+  host add-role <role>          Add the role to this host in the inventory
+  host remove-role <role>       Remove the role from this host in the inventory
+  host diff                     See what has changed in the local inventory
+  host push                     Push local inventory changes up to the git origin
 ```
-
-
-
