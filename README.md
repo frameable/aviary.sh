@@ -15,6 +15,8 @@ Done
 
 ## Principles / How it works
 
+<img src="diagram.png" width="100%">
+
 Aviary.sh follows some guiding principles:
 
 - bash is just fine (yes, it is)
