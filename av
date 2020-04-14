@@ -15,7 +15,9 @@ log_level info
 version=1.1.0
 lock_file=$lib/.lock
 pause_file=$lib/.pause
-status_file=$lib/.status
+
+data_dir=$lib/data
+status_file=$data_dir/status
 
 force=""
 command=""
@@ -72,6 +74,7 @@ function handle_err {
 
 function handle_exit {
   if (($? != 0)); then
+    log_error Failed
     status FAIL
   fi 
 }
@@ -83,9 +86,34 @@ function status {
 
 function apply_module {
   local module=$1
-  local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
   log_info Applying module $module
+  local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
+  log_debug 'apply module'
   bash $opts $inventory_dir/modules/$module/apply | log_debug 2>&1
+  log_debug 'mkdirp'
+  mkdir -p $data_dir/applied_modules
+  log_debug 'ok'
+  echo OK > $data_dir/applied_modules/$module
+}
+
+function test_module {
+  local module=$1
+  log_info Testing module $module
+  local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
+  if ! bash $opts $inventory_dir/modules/$module/test > /dev/null; then
+    log_error Test failed for module $module
+    exit 1
+  else
+    log_info Tests passed for module $module
+  fi
+}
+
+function drop_module {
+  local module=$1
+  log_info Dropping module $module
+  local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
+  bash $opts $inventory_dir/modules/$module/drop | log_debug 2>&1
+  unlink $data_dir/applied_modules/$module
 }
 
 # parse command line arguments
@@ -129,6 +157,11 @@ function identify {
 
   # identify unique modules in order
   modules=$(eval "{ grep -hs ^ $inventory_dir/hosts/$hostname/modules $inventory_dir/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
+
+  # find applied modules no longer in the inventory
+  mkdir -p $data_dir/applied_modules
+  applied_modules=$(ls $data_dir/applied_modules)
+  droppable_modules=$(comm -13 <(echo "$modules" | sort) <(echo "$applied_modules" | sort))
 }
 
 function check_inventory {
@@ -160,7 +193,8 @@ function fetch_inventory {
 function host_remove_module {
   local module=$1
   local modules_file=$inventory_dir/hosts/$(hostname)/modules
-  echo "$(cat $modules_file | grep -v $subcommand_arg)" > $modules_file
+  echo $((grep -hs ^ $modules_file || true) | grep -v $module) > $modules_file
+  echo -n $(grep -v '^$' $modules_file) > $modules_file
 }
 
 function host_add_module {
@@ -204,8 +238,8 @@ case $command in
   ;;
 
   apply)
-    trap handle_exit EXIT
     trap handle_err ERR
+    trap handle_exit EXIT
 
     fetch_inventory
     identify
@@ -223,10 +257,17 @@ case $command in
     else
       touch $lock_file
     fi
+
     # apply modules
     log_info Running apply
     for module in $modules; do
       apply_module $module
+      test_module $module
+    done
+
+    # drop obsolete modules
+    for droppable_module in $droppable_modules; do
+      drop_module $droppable_module
     done
 
     rm $lock_file
@@ -268,13 +309,12 @@ case $command in
     ;;
 
   host)
-    fetch_inventory
     read subcommand subcommand_arg <<< $command_arg
 
     case $subcommand in
       add)
-        mkdir $inventory_dir/$(hostname)
-        touch $inventory_dir/$(hostname)/.gitkeep
+        mkdir $inventory_dir/hosts/$(hostname)
+        touch $inventory_dir/hosts/$(hostname)/.gitkeep
         ;;
       add-module)
         host_add_module $subcommand_arg
