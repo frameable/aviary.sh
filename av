@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+set -E
 
 export LOG_LEVEL=${LOG_LEVEL:-info}
 export GIT_TERMINAL_PROMPT=0
@@ -82,6 +83,7 @@ function handle_exit {
 
 function status {
   local date=$(date +'%Y-%m-%d %H:%M:%S')
+  mkdir -p $(dirname $status_file)
   echo $date STATUS $1 > $status_file 
 }
 
@@ -89,16 +91,14 @@ function apply_module {
   local module=$1
   log_info Applying module $module
   local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
-  log_debug 'apply module'
   bash $opts $inventory_dir/modules/$module/apply | log_debug 2>&1
-  log_debug 'mkdirp'
   mkdir -p $data_dir/applied_modules
-  log_debug 'ok'
   echo OK > $data_dir/applied_modules/$module
 }
 
 function test_module {
   local module=$1
+  [[ -e $inventory_dir/modules/$module/test ]] || return 0
   log_info Testing module $module
   local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
   if ! bash $opts $inventory_dir/modules/$module/test > /dev/null; then
@@ -204,9 +204,15 @@ function fetch_inventory {
   else
     check_inventory
     log_info "Fetching inventory"
-    (timeout 60 git -C $inventory_dir pull --depth 1 > /dev/null 2>&1) || (timeout 60 git clone --depth 1 --single-branch $inventory_git_url $inventory_dir > /dev/null 2>&1)
-    git -C $inventory_dir reset --hard > /dev/null
-    git -C $inventory_dir clean -fd > /dev/null
+    if [[ -e $inventory_dir/.git ]]; then
+      if ! git -C $inventory_dir diff-index --quiet HEAD --; then
+        log_error "Local inventory checkout is dirty; try --no-fetch or reset"
+        exit 1
+      fi
+      git -C $inventory_dir reset --hard > /dev/null
+      git -C $inventory_dir clean -fd > /dev/null
+    fi
+    (timeout 60 git -C $inventory_dir pull --depth 1 > /dev/null) || (timeout 60 git clone --depth 1 --single-branch $inventory_git_url $inventory_dir > /dev/null)
   fi
 }
 
@@ -266,13 +272,13 @@ case $command in
 
     # consult pause file
     if [[ -e $pause_file && ! $force ]]; then
-      log_warn 'Bailing for pause lock file'
+      log_warn 'Bailing for pause lock file; try `av recover`'
       exit 1 
     fi
 
     # set up our lock file
     if [[ -e $lock_file && ! $force ]]; then
-      log_error 'Bailing for run lock file'
+      log_error 'Bailing for run lock file; try `av resume`'
       exit 1
     else
       touch $lock_file
