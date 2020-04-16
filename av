@@ -45,8 +45,9 @@ Options:
 Commands:
   status                   Report the status of the last run of \`apply\` [default]
   host <action>            Perform actions specific to the current host; more below
-  fetch                    Update local database by fetching from upstream
   apply                    Apply roles and their associated modules on this host 
+  fetch                    Update local database by fetching from upstream
+  directive                Run any outstanding directives from the inventory
   recover                  Reset run lock file after a failure
   pause                    Set the pause lock to avoid periodic runs while debugging
   resume                   Resume periodic runs after a pause
@@ -176,6 +177,25 @@ function check_inventory {
   fi
 }
 
+function execute_directives {
+
+  if [[ -d $inventory_dir/directives ]]; then
+
+    # find directives from within the last day which have not been executed
+    inventory_directives=$(find $inventory_dir/directives -type f -mtime 0 -exec ls -1rt {} + | xargs -n1 basename)
+    mkdir -p $data_dir/executed_directives
+
+    for directive in $inventory_directives; do
+      mtime=$(stat -c "%Y" $inventory_dir/directives/$directive)
+      if ! grep -qhs $mtime $data_dir/executed_directives/$directive; then
+        log_info Executing directive $directive
+        echo $mtime > $data_dir/executed_directives/$directive
+        bash $inventory_dir/directives/$directive
+      fi
+    done
+  fi
+}
+
 function fetch_inventory {
   if [[ ! -z "$local_inventory" ]]; then
     log_info "Using local inventory $(readlink -f $local_inventory)"
@@ -184,7 +204,7 @@ function fetch_inventory {
   else
     check_inventory
     log_info "Fetching inventory"
-    timeout 60 git -C $inventory_dir pull > /dev/null || timeout 60 git clone $inventory_git_url $inventory_dir > /dev/null
+    (timeout 60 git -C $inventory_dir pull --depth 1 > /dev/null 2>&1) || (timeout 60 git clone --depth 1 --single-branch $inventory_git_url $inventory_dir > /dev/null 2>&1)
     git -C $inventory_dir reset --hard > /dev/null
     git -C $inventory_dir clean -fd > /dev/null
   fi
@@ -291,6 +311,11 @@ case $command in
     echo 
     [[ -e $lock_file ]] && echo '-- Run lock is set; clear with `av recover` --'
     [[ -e $pause_file ]] && echo '-- Pause lock is set; clear with `av resume` --'
+    ;;
+
+  directive)
+    fetch_inventory
+    execute_directives
     ;;
 
   hosts)

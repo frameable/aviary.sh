@@ -44,8 +44,8 @@ Configure your inventory if you don't have one yet:
 ```bash
 mkdir inventory
 cd inventory
-mkdir {hosts,modules,roles}
-touch {hosts,modules,roles}/.gitkeep
+mkdir {hosts,modules,roles,directives}
+touch {hosts,modules,roles,directives}/.gitkeep
 git init
 git add .
 git commit -m "initial commit"
@@ -161,7 +161,8 @@ inventory
 │       ├── apply
 │       ├── motd.template
 │       └── variables
-└── roles
+├── roles
+└── directives
 ```
 
 From here, add more modules, group modules into roles, and apply roles to your hosts, similarly to how we did with this first module.
@@ -177,12 +178,13 @@ From here, add more modules, group modules into roles, and apply roles to your h
 
 **Module** - Service or program (e.g., "node", or "postgres") required to fulfill a role.  A role will usually be comprised of many modules.
 
+**Directive** - One-time set of commands to be executed immediately.
 
 ## Inventory
 
 The inventory is the git repository where you keep configuration about your servers -- what roles they play, what services they run, etc.  
 
-There are three top-level directories: `hosts`, `roles`, and `modules`.  Files in each directory are newline-delimited text files, unless specified otherwise
+There are four top-level directories: `hosts`, `roles`, `modules`, and `directives`.  Files in each directory are newline-delimited text files, unless specified otherwise
 
 ### Hosts
 
@@ -202,6 +204,10 @@ The modules directory contains a directory for each module.  In each module dire
   - `apply` - idempotent bash script that will ensure the given service or program is installed and running
   - `variables` - list of bash variable assignments local to the module
   - any other files (templates, configuration files, etc) necessary to support the `apply` script
+
+### Directives
+
+The directives directory contains bash scripts to be executed once, immediately when they are discovered.  Only directive scripts with modification times within the most recent 24 hours will be considered for execution.
 
 
 ## av
