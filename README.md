@@ -230,8 +230,9 @@ Options:
 Commands:
   status                   Report the status of the last run of `apply` [default]
   host <action>            Perform actions specific to the current host; more below
+  apply                    Apply roles and their associated modules on this host 
   fetch                    Update local database by fetching from upstream
-  apply                    Fetch and apply roles and their associated modules on this host 
+  directive                Run any outstanding directives from the inventory
   recover                  Reset run lock file after a failure
   pause                    Set the pause lock to avoid periodic runs while debugging
   resume                   Resume periodic runs after a pause
