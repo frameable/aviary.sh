@@ -68,7 +68,7 @@ Of course the dealings with git will be non-interactive, so you need to either s
 
 #### Modules
 
-Add our first module:
+In the `inventory` directory we created above, add our first module:
 
 ```bash
 mkdir modules/motd
@@ -78,7 +78,7 @@ Create an idempotent script to configure the message-of-the-day that users will 
 
 ```bash
 # inventory/modules/motd/apply
-cat <<<EOF > /etc/motd
+cat <<EOF > /etc/motd
 "Ever make mistakes in life? Let’s make them birds. Yeah, they’re birds now."
 --Bob Ross
 EOF
