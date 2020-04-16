@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=1.1.0
+VERSION=1.2.0
 INSTALL_PATH=/var/lib
 AV_PATH=$INSTALL_PATH/aviary/av
 RELEASE_URL=https://gitlab.com/dchester/aviary.sh/-/archive/${VERSION}/aviary.sh-${VERSION}.tar.gz
@@ -36,6 +36,7 @@ fi
 
 echo Adding entry to /etc/crontab...
 echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
+echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> /etc/crontab
 echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply >> /var/log/aviary.log 2>&1" >> /etc/crontab
 
 echo Done
