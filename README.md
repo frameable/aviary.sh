@@ -207,7 +207,7 @@ The modules directory contains a directory for each module.  In each module dire
 
 ### Directives
 
-The directives directory contains bash scripts to be executed once, immediately when they are discovered.  Only directive scripts with modification times within the most recent 24 hours will be considered for execution.
+The directives directory contains bash scripts to be executed once on each host, immediately when they are discovered.  Only directive scripts with modification times within the most recent 24 hours will be considered for execution.
 
 
 ## av
