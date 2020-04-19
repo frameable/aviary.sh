@@ -21,8 +21,8 @@
 # SOFTWARE.
 
 LS_VERSION=0.3
+LS_OUTPUT=${LS_OUTPUT:-/dev/stderr}
 
-LS_OUTPUT=${LS_OUTPUT:-/dev/stdout}
 # XXX need more flexible templating, currently manual padding for level names
 LS_DEFAULT_FMT=${LS_DEFAULT_FMT:-'$TS | $_LS_LEVEL_STR |'}
 
@@ -34,6 +34,10 @@ LS_ERROR_LEVEL=40
 LS_CRITICAL_LEVEL=50
 
 LS_LEVEL=${LS_LEVEL:-$LS_WARNING_LEVEL}
+
+function log_quiet {
+  LS_LEVEL=100
+}
 
 function log_level {
   LOG_LEVEL=$1
@@ -64,9 +68,9 @@ function log_level {
 LS_LEVELS=(
   $LS_DEBUG_LEVEL    'DEBUG' "$LS_DEFAULT_FMT" "\e[34m"    "\e[0m"
   $LS_INFO_LEVEL     'INFO' "$LS_DEFAULT_FMT" "\e[32m"    "\e[0m"
-  $LS_WARNING_LEVEL  'WARNING' "$LS_DEFAULT_FMT" "\e[33m"    "\e[0m"
+  $LS_WARNING_LEVEL  'WARN' "$LS_DEFAULT_FMT" "\e[33m"    "\e[0m"
   $LS_ERROR_LEVEL    'ERROR' "$LS_DEFAULT_FMT" "\e[31m"    "\e[0m"
-  $LS_CRITICAL_LEVEL 'CRITICAL' "$LS_DEFAULT_FMT" "\e[37;41m" "\e[0m"
+  $LS_CRITICAL_LEVEL 'CRIT' "$LS_DEFAULT_FMT" "\e[37;41m" "\e[0m"
 )
 
 _LS_FIND_LEVEL_STR () {
