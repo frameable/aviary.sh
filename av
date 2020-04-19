@@ -27,6 +27,7 @@ no_fetch=""
 local_inventory=""
 
 inventory_git_url=${inventory_git_url:-}
+valid_name='^[a-z0-9_\-]+$'
 
 function usage {
   cat <<EOF
@@ -42,25 +43,29 @@ Options:
   --inventory <path>       Use a local inventory at the specified path
   --no-fetch               Don't fetch the inventory before running the command
   --force                  Run even if a pause or run lock is set
+  --quiet|-q               Suppress log messages
 
 Commands:
   status                   Report the status of the last run of \`apply\` [default]
-  host <action>            Perform actions specific to the current host; more below
+  host <host> <action>     Perform actions specific to a given host; more below
   apply                    Apply roles and their associated modules on this host 
   fetch                    Update local database by fetching from upstream
   directive                Run any outstanding directives from the inventory
   recover                  Reset run lock file after a failure
   pause                    Set the pause lock to avoid periodic runs while debugging
   resume                   Resume periodic runs after a pause
+  list-hosts [filter]      List hosts with an optional filter (e.g. role=web)
+  list-modules             List all available modules
+  list-roles               List all available roles
 
 Host actions:
-  host add                      Add the current host to the inventory
-  host add-module <module>      Add the module to this host in the inventory
-  host remove-module <module>   Remove the module from this host in the inventory
-  host add-role <role>          Add the role to this host in the inventory
-  host remove-role <role>       Remove the role from this host in the inventory
-  host diff                     See what has changed in the local inventory
-  host push                     Push local inventory changes up to the git origin
+  host <host> [host...]                Show attributes for the host(s)
+  host <host> add                      Add the host to the inventory
+  host <host> remove                   Remove the host from the inventory
+  host <host> add-module <module>      Add the module to the host in the inventory
+  host <host> remove-module <module>   Remove the module from the host in the inventory
+  host <host> add-role <role>          Add the role to the host in the inventory
+  host <host> remove-role <role>       Remove the role from the host in the inventory
 EOF
 }
 
@@ -122,6 +127,7 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     --force) force=1;;
     --no-fetch) no_fetch=1;;
+    --quiet|-q) log_quiet;;
     --help) usage && exit;;
     --version) version && exit;;
     --log-level) shift && log_level $1;;
@@ -142,6 +148,21 @@ cd $aviary_root
 [[ ! -z "$local_inventory" ]] && inventory_dir=$local_inventory
 [[ -z "$command" ]] && command=status
 
+function host_roles {
+  local host=${1:-$(hostname)}
+  roles=$(grep -hs ^ $inventory_dir/hosts/$host/roles || true)
+  echo "$roles"
+}
+
+function host_modules {
+  local host=${1:-$(hostname)}
+  # identify our roles
+  roles=$(grep -hs ^ $inventory_dir/hosts/$host/roles || true)
+  roles_pattern={${roles//$'\n'/,},}
+  modules=$(eval "{ grep -hs ^ $inventory_dir/hosts/$host/modules $inventory_dir/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
+  echo "$modules"
+}
+
 function identify {
 
   if [[ ! -d $inventory_dir/hosts/$(hostname) ]]; then
@@ -149,15 +170,9 @@ function identify {
     exit 1
   fi
 
-  # identify our roles
-  roles=$(grep -hs ^ $inventory_dir/hosts/$(hostname)/roles || true)
-  roles_pattern={${roles//$'\n'/,},}
-  hostname=$(hostname)
-
-  log_debug applying roles $roles
-
-  # identify unique modules in order
-  modules=$(eval "{ grep -hs ^ $inventory_dir/hosts/$hostname/modules $inventory_dir/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
+  # identify our roles and modules
+  roles=$(host_roles)
+  modules=$(host_modules)
 
   # find applied modules no longer in the inventory
   mkdir -p $data_dir/applied_modules
@@ -216,45 +231,90 @@ function fetch_inventory {
   fi
 }
 
+function host_entry {
+  variables=$(grep -hs = $inventory_dir/hosts/$host/variables || true)
+  roles=$((grep -hs ^ $inventory_dir/hosts/$host/roles || true) | sed 's/^/role=/g')
+  modules=$(host_modules $host | sed 's/^/module=/g')
+  entries="host=${host} "$(echo $roles $modules $variables | paste -s)$'\n'
+  echo "$entries"
+}
+
 function host_remove_module {
-  local module=$1
-  local modules_file=$inventory_dir/hosts/$(hostname)/modules
+  local host=$1
+  local module=$2
+  local modules_file=$inventory_dir/hosts/$host/modules
   echo $((grep -hs ^ $modules_file || true) | grep -v $module) > $modules_file
   echo -n $(grep -v '^$' $modules_file) > $modules_file
 }
 
 function host_add_module {
-  local module=$1
-  local modules_file=$inventory_dir/hosts/$(hostname)/modules
+  local host=$1
+  local module=$2
+  local modules_file=$inventory_dir/hosts/$host/modules
 
   if [[ -z "$(ls $inventory_dir/modules | grep $module)" ]]; then
     log_error "couldn't find module $module"
     exit 1
   fi
 
-  mkdir -p $inventory_dir/hosts/$(hostname)
-  host_remove_module $module
+  mkdir -p $inventory_dir/hosts/$host
+  host_remove_module $host $module
   echo $module >> $modules_file
 }
 
 function host_remove_role {
-  local role=$1
-  local roles_file=$inventory_dir/hosts/$(hostname)/roles
+  local host=$1
+  local role=$2
+  local roles_file=$inventory_dir/hosts/$host/roles
   echo "$(cat $roles_file | grep -v $subcommand_arg)" > $roles_file
 }
 
 function host_add_role {
-  local role=$1
-  local roles_file=$inventory_dir/hosts/$(hostname)/roles
+  local host=$1
+  local role=$2
+  local roles_file=$inventory_dir/hosts/$host/roles
 
   if [[ -z "$(ls $inventory_dir/roles | grep $role)" ]]; then
     log_error "Couldn't find module $role"
     exit 1
   fi
 
-  mkdir -p $inventory_dir/hosts/$(hostname)
-  host_remove_module $role
+  mkdir -p $inventory_dir/hosts/$host
+  host_remove_module $host $role
   echo $role >> $roles_file
+}
+
+function check_roles {
+  for role in $(ls -1 $inventory_dir/roles); do
+    if [[ ! -e $inventory_dir/roles/$role/modules ]]; then
+      log_warn "No modules file for role \`$role\`"
+    fi
+    malformed_modules=$(grep -sPv $valid_name $inventory_dir/roles/$role/modules || true);
+    if [[ ! -z $malformed_modules ]]; then
+      log_error Malformed role modules: $malformed_modules
+    fi
+    for module in $(grep -hs ^ $inventory_dir/roles/$role/modules || true); do
+      if [[ ! -e $inventory_dir/modules/$module ]]; then
+        log_warn "Role \`$role\` module \`$module\` does not exist"
+      fi
+    done
+  done
+}
+
+function check_modules {
+  for module in $(ls -1 $inventory_dir/modules); do
+    if [[ ! -e $inventory_dir/modules/$module/apply ]]; then
+      log_warn "No apply script for module \`$module\`"
+    fi
+  done
+}
+
+function check_hosts {
+  for host in $(ls -1 $inventory_dir/hosts); do
+    if [[ -z $(ls -1 $inventory_dir/hosts/$host/{modules,roles}) ]]; then
+      log_warn "No roles for host $host"
+    fi
+  done
 }
 
 case $command in
@@ -324,46 +384,81 @@ case $command in
     execute_directives
     ;;
 
-  hosts)
+  list-hosts)
+    filters=$command_arg
     fetch_inventory
-    ls -1 $inventory_dir/hosts
+    entries=""
+    hosts=$(ls -1 $inventory_dir/hosts)
+    for host in $hosts; do
+      host_entry=$(host_entry $host)
+      entries=${entries}$host$'\t'${host_entry}$'\n'
+    done
+
+    log_debug $'\n'"$entries"
+
+    for filter in $filters; do
+      entries=$(echo "$entries" | grep -P $filter)
+    done
+
+    echo "$entries" | grep -v '^$' | cut -f1
     ;;
 
-  modules)
+  list-modules)
     fetch_inventory
     ls -1 $inventory_dir/modules
     ;;
 
-  roles)
+  list-roles)
     fetch_inventory
     ls -1 $inventory_dir/roles
     ;;
 
-  host)
-    read subcommand subcommand_arg <<< $command_arg
+  check)
+    check_modules
+    check_roles
+    check_hosts
+    ;;
 
+  inventory)
+    read subcommand subcommand_arg <<< $command_arg
     case $subcommand in
-      add)
-        mkdir $inventory_dir/hosts/$(hostname)
-        touch $inventory_dir/hosts/$(hostname)/.gitkeep
-        ;;
-      add-module)
-        host_add_module $subcommand_arg
-        ;;
-      remove-module)
-        host_remove_module $subcommand_arg
-        ;;
-      add-role)
-        host_add_role $subcommand_arg
-        ;;
-      remove-role)
-        host_remove_role $subcommand_arg
-        ;;
       diff)
         git -C $inventory_dir diff
         ;;
       push)
         git -C $inventory_dir push
+        ;;
+    esac
+    ;;
+
+  host)
+    read host subcommand subcommand_arg <<< $command_arg
+
+    case $subcommand in
+      add)
+        mkdir $inventory_dir/hosts/$host
+        touch $inventory_dir/hosts/$host/.gitkeep
+        ;;
+      remove)
+        rm -rf $inventory_dir/hosts/$host
+        ;;
+      add-module)
+        host_add_module $host $subcommand_arg
+        ;;
+      remove-module)
+        host_remove_module $host $subcommand_arg
+        ;;
+      add-role)
+        host_add_role $host $subcommand_arg
+        ;;
+      remove-role)
+        host_remove_role $host $subcommand_arg
+        ;;
+      *)
+        for host in $command_arg; do
+          entry=$(host_entry $host)
+          echo -e "$entry" | sed 's/ /\n/g'
+        done
         ;;
     esac
     ;;
