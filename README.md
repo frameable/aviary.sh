@@ -55,7 +55,7 @@ Configure and push your repo to an origin:
 
 ```bash
 git remote add origin $my_origin_url
-git push -u origin
+git push -u origin master
 ```
 
 Set your inventory url in config:
