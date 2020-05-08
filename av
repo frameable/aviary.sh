@@ -220,7 +220,7 @@ function fetch_inventory {
     check_inventory
     log_info "Fetching inventory"
     if [[ -e $inventory_dir/.git ]]; then
-      if ! git -C $inventory_dir diff-index --quiet HEAD --; then
+      if [[ -n $(git -C $inventory_dir status --porcelain) ]]; then
         log_error "Local inventory checkout is dirty; try --no-fetch or reset"
         exit 1
       fi
