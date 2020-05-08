@@ -227,7 +227,7 @@ function fetch_inventory {
       git -C $inventory_dir reset --hard > /dev/null
       git -C $inventory_dir clean -fd > /dev/null
     fi
-    (timeout 60 git -C $inventory_dir pull --depth 1 > /dev/null) || (timeout 60 git clone --depth 1 --single-branch $inventory_git_url $inventory_dir > /dev/null)
+    (timeout 60 git -C $inventory_dir pull > /dev/null) || (timeout 60 git clone $inventory_git_url $inventory_dir > /dev/null)
   fi
 }
 
