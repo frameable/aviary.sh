@@ -333,13 +333,13 @@ case $command in
 
     # consult pause file
     if [[ -e $pause_file && ! $force ]]; then
-      log_warn 'Bailing for pause lock file; try `av recover`'
+      log_warn 'Bailing for pause lock file; try `av resume`'
       exit 1 
     fi
 
     # set up our lock file
     if [[ -e $lock_file && ! $force ]]; then
-      log_error 'Bailing for run lock file; try `av resume`'
+      log_error 'Bailing for run lock file; try `av recover`'
       exit 1
     else
       touch $lock_file
