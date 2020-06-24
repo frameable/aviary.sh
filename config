@@ -1,3 +1,0 @@
-#inventory_git_url=https://access-token@github.com/organization/aviary-inventory
-aviary_root=/var/lib/aviary
-inventory_dir=$aviary_root/inventory
