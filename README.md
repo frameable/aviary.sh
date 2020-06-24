@@ -13,7 +13,7 @@ Applying module memcached
 Done
 ```
 
-## Principles / How it works
+## How it works
 
 <img src="diagram.png" width="100%">
 
@@ -25,8 +25,10 @@ Aviary.sh follows some guiding principles:
 
 Each host periodically fetches the latest version of the inventory to see what roles should it be performing.  Given whatever roles, the inventory also describes modules (services, programs, etc) that need to be installed and running in order to fulfill the role, and the host configures itself accordingly.  The inventory is a git repo with a specific directory structure and idempotent scripts to apply modules.
 
-## Getting started
+Made with :heart: by the friendly folks at https://team.video
 
+
+## Getting started
 
 #### Installation
 
@@ -203,6 +205,7 @@ The roles directory contains a directory for each role.  In each role directory 
 The modules directory contains a directory for each module.  In each module directory live the files:
   - `apply` - idempotent bash script that will ensure the given service or program is installed and running
   - `variables` - list of bash variable assignments local to the module
+  - `test` - bash script to assert that all looks well after we've run `apply`
   - any other files (templates, configuration files, etc) necessary to support the `apply` script
 
 ### Directives
@@ -246,3 +249,12 @@ Host actions:
   host diff                     See what has changed in the local inventory
   host push                     Push local inventory changes up to the git origin
 ```
+
+### Why Bash?
+
+For just about three decades, bash has been standard issue on the vast majority of computers serving traffic on the Internet.  Other languages have come and gone, each with their own story and arc, while bash has just been there.
+
+In addition to it consistently being there, it is good / good-enough at most everything we want to do while configuring a machine.  If we were using some other language half the time we'd end up shelling out anyway, so let's just stick in the shell to begin with and revel in the ease and consistency...
+
+But it's too _funky_ you say.  Well, yes, bash can have its quirks.  But we need some funk every now and then.  Let's just embrace it!
+
