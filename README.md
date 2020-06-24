@@ -250,7 +250,7 @@ Host actions:
   host push                     Push local inventory changes up to the git origin
 ```
 
-### Why Bash?
+## Why Bash?
 
 For just about three decades, bash has been standard issue on the vast majority of computers serving traffic on the Internet.  Other languages have come and gone, each with their own story and arc, while bash has just been there.
 
