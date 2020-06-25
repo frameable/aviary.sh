@@ -3,7 +3,7 @@
 ***
 ###
 
-Minimal distributed configuration management in bash.  Tiny alternative to chef / puppet / etc.
+Minimal distributed configuration management in bash.  Tiny alternative to chef / puppet / etc.  Made with :heart: by the friendly folks at https://team.video
 
 ```
 $ sudo av apply
@@ -25,7 +25,6 @@ Aviary.sh follows some guiding principles:
 
 Each host periodically fetches the latest version of the inventory to see what roles should it be performing.  Given whatever roles, the inventory also describes modules (services, programs, etc) that need to be installed and running in order to fulfill the role, and the host configures itself accordingly.  The inventory is a git repo with a specific directory structure and idempotent scripts to apply modules.
 
-Made with :heart: by the friendly folks at https://team.video
 
 
 ## Getting started
