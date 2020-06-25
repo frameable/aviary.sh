@@ -3,7 +3,7 @@
 ***
 ###
 
-Minimal distributed configuration management in bash.  Tiny alternative to chef / puppet / etc.  Made with :heart: by the friendly folks at https://team.video
+Minimal distributed configuration management in bash.  Tiny alternative to ansible / chef / puppet / etc.  Made with :heart: by the friendly folks at https://team.video
 
 ```
 $ sudo av apply
