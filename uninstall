@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+function run() {
+  VERSION=1.3.2
+  INSTALL_PATH=/var/lib
+  AV_PATH=$INSTALL_PATH/aviary/av
+
+  if [[ ! -e /var/lib/aviary ]]; then 
+    echo "No existing installation at $INSTALL_PATH; exiting"
+    exit 1
+  fi
+
+  echo Uninstalling aviary from ${INSTALL_PATH}...
+  rm -rf ${INSTALL_PATH}/aviary
+  rm -f /usr/bin/av
+
+  echo Removing entries from /etc/crontab...
+  cp /etc/crontab /etc/crontab-aviary-uninstall
+  grep -v "$INSTALL_PATH/aviary" /etc/crontab > /etc/crontab.new
+  mv /etc/crontab.new /etc/crontab
+  if grep -q "$INSTALL_PATH/aviary" "/etc/crontab"; then
+    echo ERROR: Could not remove entries - please clean up /etc/crontab manually.
+  else
+    echo /etc/crontab updated - removing backup...
+    rm -f /etc/crontab-aviary-uninstall
+  fi
+
+  echo Done
+}
+
+# Wrap in function to ensure entire script is downloaded.
+run
