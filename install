@@ -35,6 +35,9 @@ function run() {
     echo "inventory_git_url=$INVENTORY_GIT_URL" >> $CONFIG_FILE
   fi
 
+  echo Making a backup of /etc/crontab...
+  cp /etc/crontab /etc/crontab-pre-aviary
+
   echo Adding entry to /etc/crontab...
   echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
   echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> /etc/crontab
