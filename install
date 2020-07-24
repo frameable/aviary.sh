@@ -38,10 +38,11 @@ function run() {
     echo "inventory_git_url=$INVENTORY_GIT_URL" >> $CONFIG_FILE
   fi
 
-  echo Adding entry to /etc/crontab...
-  echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
-  echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> /etc/crontab
-  echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply >> /var/log/aviary.log 2>&1" >> /etc/crontab
+  echo Adding entry to ${CRONTAB_FILE}...
+  touch ${CRONTAB_FILE}
+  echo "$(cat ${CRONTAB_FILE} | grep -v $AV_PATH)" > ${CRONTAB_FILE}
+  echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> ${CRONTAB_FILE}
+  echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply >> /var/log/aviary.log 2>&1" >> ${CRONTAB_FILE}
 
   echo Done
 }
