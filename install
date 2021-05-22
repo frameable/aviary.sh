@@ -20,7 +20,7 @@ function run() {
     echo "Installing with no inventory git url; set later in $CONFIG_FILE"
   fi
 
-  if [[ -e /var/lib/aviary ]]; then 
+  if [[ -e ${INSTALL_PATH}/aviary ]]; then 
     echo "Found existing installation at $INSTALL_PATH; exiting"
     exit 1
   fi
@@ -28,7 +28,7 @@ function run() {
   echo Installing to ${INSTALL_PATH}...
   mkdir -p ${INSTALL_PATH}/aviary
   curl -s $RELEASE_URL | tar --strip-components=1 -C ${INSTALL_PATH}/aviary -xz
-  ln -sf /var/lib/aviary/av /usr/bin/av
+  ln -sf ${INSTALL_PATH}/aviary/av /usr/bin/av
   mkdir -p ${INSTALL_PATH}/aviary/inventory
 
   if [[ ! -z "$INVENTORY_GIT_URL" ]]; then
