@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-VERSION=1.3.2
+VERSION=1.4.0
 INSTALL_PATH=/var/lib
 AV_PATH=$INSTALL_PATH/aviary/av
-RELEASE_URL=https://gitlab.com/dchester/aviary.sh/-/archive/${VERSION}/aviary.sh-${VERSION}.tar.gz
+RELEASE_URL=https://github.com/frameable/aviary.sh/archive/refs/tags/v${VERSION}.tar.gz
 INVENTORY_GIT_URL=${1:-""}
 CONFIG_FILE=${INSTALL_PATH}/aviary/config
 
@@ -26,7 +26,7 @@ fi
 
 echo Installing to ${INSTALL_PATH}...
 mkdir -p ${INSTALL_PATH}/aviary
-curl -s $RELEASE_URL | tar --strip-components=1 -C ${INSTALL_PATH}/aviary -xz
+curl -sL $RELEASE_URL | tar --strip-components=1 -C ${INSTALL_PATH}/aviary -xz
 ln -sf /var/lib/aviary/av /usr/bin/av
 mkdir -p ${INSTALL_PATH}/aviary/inventory
 
