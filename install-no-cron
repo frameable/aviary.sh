@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+VERSION=1.4.0
+INSTALL_PATH=/var/lib
+AV_PATH=$INSTALL_PATH/aviary/av
+RELEASE_URL=https://github.com/frameable/aviary.sh/archive/refs/tags/v${VERSION}.tar.gz
+INVENTORY_GIT_URL=${1:-""}
+CONFIG_FILE=${INSTALL_PATH}/aviary/config
+
+# check for git dependency
+if ! /usr/bin/which git > /dev/null; then
+  echo "Please install git and try again"
+  exit 1
+fi
+
+if [[ -z "$INVENTORY_GIT_URL" ]]; then
+  echo "Installing with no inventory git url; set later in $CONFIG_FILE"
+fi
+
+if [[ -e /var/lib/aviary ]]; then 
+  echo "Found existing installation at $INSTALL_PATH; exiting"
+  exit 1
+fi
+
+echo Installing to ${INSTALL_PATH}...
+mkdir -p ${INSTALL_PATH}/aviary
+curl -sL $RELEASE_URL | tar --strip-components=1 -C ${INSTALL_PATH}/aviary -xz
+ln -sf /var/lib/aviary/av /usr/bin/av
+mkdir -p ${INSTALL_PATH}/aviary/inventory
+
+if [[ ! -z "$INVENTORY_GIT_URL" ]]; then
+  echo "inventory_git_url=$INVENTORY_GIT_URL" >> $CONFIG_FILE
+fi
+
+echo Done
