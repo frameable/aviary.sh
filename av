@@ -163,6 +163,15 @@ function host_modules {
   echo "$modules"
 }
 
+function host_variables {
+  local host=${1:-$(hostname)}
+  roles=$(grep -hs ^ $inventory_dir/hosts/$host/roles || true)
+  roles_pattern={${roles//$'\n'/,},}
+
+  variables=$(eval "{ grep -hs ^ $inventory_dir/roles/$roles_pattern/variables $inventory_dir/hosts/$host/variables || true; }" | awk '!x[$0]++')
+  echo "$variables"
+}
+
 function identify {
 
   if [[ ! -d $inventory_dir/hosts/$(hostname) ]]; then
@@ -232,7 +241,8 @@ function fetch_inventory {
 }
 
 function host_entry {
-  variables=$(grep -hs = $inventory_dir/hosts/$host/variables || true)
+  variables=$(host_variables $host)
+
   roles=$((grep -hs ^ $inventory_dir/hosts/$host/roles || true) | sed 's/^/role=/g')
   modules=$(host_modules $host | sed 's/^/module=/g')
   entries="host=${host} "$(echo $roles $modules $variables | paste -s)$'\n'
@@ -489,4 +499,3 @@ case $command in
     ;;
 
 esac
-
