@@ -192,12 +192,13 @@ There are four top-level directories: `hosts`, `roles`, `modules`, and `directiv
 The hosts directory contains a directory for each host.  In each host directory live the files:
   - `roles` - a list of roles to be fulfilled by the host
   - `modules` - a list of ad-hoc modules to be applied on the host
-  - `variables` - list of bash variable assignments local to the host
+  - `variables` - list of bash variable assignments local to the host. These take priority over role variables
 
 ### Roles
 
 The roles directory contains a directory for each role.  In each role directory live the files:
   - `modules` - a list of modules required to fulfill the given role
+  - `variables` - list of bash variable assignments to be supplied when assuming a role. Host variables can overwrite these
 
 ### Modules
 
@@ -256,4 +257,3 @@ For just about three decades, bash has been standard issue on the vast majority 
 In addition to it consistently being there, it is good / good-enough at most everything we want to do while configuring a machine.  If we were using some other language half the time we'd end up shelling out anyway, so let's just stick in the shell to begin with and revel in the ease and consistency...
 
 But it's too _funky_ you say.  Well, yes, bash can have its quirks.  But we need some funk every now and then.  Let's just embrace it!
-

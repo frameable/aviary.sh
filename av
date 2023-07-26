@@ -96,7 +96,11 @@ function apply_module {
   local module=$1
   log_info Applying module $module
   local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
+
+  # eval to not include quote characters in values
+  eval export $(host_variables $(hostname))
   bash $opts $inventory_dir/modules/$module/apply
+
   mkdir -p $data_dir/applied_modules
   echo OK > $data_dir/applied_modules/$module
 }
@@ -161,6 +165,15 @@ function host_modules {
   roles_pattern={${roles//$'\n'/,},}
   modules=$(eval "{ grep -hs ^ $inventory_dir/hosts/$host/modules $inventory_dir/roles/$roles_pattern/modules || true; }" | awk '!x[$0]++')
   echo "$modules"
+}
+
+function host_variables {
+  local host=${1:-$(hostname)}
+  roles=$(grep -hs ^ $inventory_dir/hosts/$host/roles || true)
+  roles_pattern={${roles//$'\n'/,},}
+
+  variables=$(eval "{ grep -hs ^ $inventory_dir/roles/$roles_pattern/variables $inventory_dir/hosts/$host/variables || true; }" | awk '!x[$0]++')
+  echo "$variables"
 }
 
 function identify {
@@ -232,7 +245,8 @@ function fetch_inventory {
 }
 
 function host_entry {
-  variables=$(grep -hs = $inventory_dir/hosts/$host/variables || true)
+  variables=$(host_variables $host)
+
   roles=$((grep -hs ^ $inventory_dir/hosts/$host/roles || true) | sed 's/^/role=/g')
   modules=$(host_modules $host | sed 's/^/module=/g')
   entries="host=${host} "$(echo $roles $modules $variables | paste -s)$'\n'
@@ -489,4 +503,3 @@ case $command in
     ;;
 
 esac
-
