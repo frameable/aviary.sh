@@ -192,13 +192,13 @@ There are four top-level directories: `hosts`, `roles`, `modules`, and `directiv
 The hosts directory contains a directory for each host.  In each host directory live the files:
   - `roles` - a list of roles to be fulfilled by the host
   - `modules` - a list of ad-hoc modules to be applied on the host
-  - `variables` - list of bash variable assignments local to the host take priority over role variables
+  - `variables` - list of bash variable assignments local to the host. These take priority over role variables
 
 ### Roles
 
 The roles directory contains a directory for each role.  In each role directory live the files:
   - `modules` - a list of modules required to fulfill the given role
-  - `variables` - list of bash variable assignments to be supplied when assuming a role
+  - `variables` - list of bash variable assignments to be supplied when assuming a role. Host variables can overwrite these
 
 ### Modules
 
