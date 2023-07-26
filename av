@@ -96,8 +96,11 @@ function apply_module {
   local module=$1
   log_info Applying module $module
   local opts=$([[ $LOG_LEVEL == 'trace' ]] && echo '-x')
-  export $(host_variables $(hostname))
+
+  # eval to not include quote characters in values
+  eval export $(host_variables $(hostname))
   bash $opts $inventory_dir/modules/$module/apply
+
   mkdir -p $data_dir/applied_modules
   echo OK > $data_dir/applied_modules/$module
 }
