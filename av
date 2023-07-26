@@ -59,13 +59,15 @@ Commands:
   list-roles               List all available roles
 
 Host actions:
-  host <host> [host...]                Show attributes for the host(s)
-  host <host> add                      Add the host to the inventory
-  host <host> remove                   Remove the host from the inventory
-  host <host> add-module <module>      Add the module to the host in the inventory
-  host <host> remove-module <module>   Remove the module from the host in the inventory
-  host <host> add-role <role>          Add the role to the host in the inventory
-  host <host> remove-role <role>       Remove the role from the host in the inventory
+  host <host> [host...]                     Show attributes for the host(s)
+  host <host> add                           Add the host to the inventory
+  host <host> remove                        Remove the host from the inventory
+  host <host> add-module <module>           Add the module to the host in the inventory
+  host <host> remove-module <module>        Remove the module from the host in the inventory
+  host <host> add-role <role>               Add the role to the host in the inventory
+  host <host> remove-role <role>            Remove the role from the host in the inventory
+  host <host> set-variable <key> <value>    Set the variable for the host in the inventory
+  host <host> unset-variable <key> <value>  Unset the variable for the host in the inventory
 EOF
 }
 
@@ -299,6 +301,35 @@ function host_add_role {
   echo $role >> $roles_file
 }
 
+function host_set_variable {
+  local field=$1
+  local value=$2
+  local var_file=$inventory_dir/hosts/$host/variables
+
+  if ! grep "^$field=" "$var_file" &>/dev/null; then
+    echo "$field='$value'" >> "$var_file" >/dev/null
+    log_debug "Added $field=['' -> '$value']"
+    return
+  fi
+
+  value_prev="$(grep -Po "(?<=$field=).+" $var_file | tr -d "\"'")"
+  if [[ "$value_prev" == "$value" ]]; then
+    log_debug "Nothing to do!"
+    return
+  fi
+
+  sed -i "" "s|^$field=.*\$|$field='$value'|g" "$var_file"
+  log_debug "Updated $field=['$value_prev' -> '$value']"
+}
+
+function host_unset_variable {
+  local field=$1
+  local var_file=$inventory_dir/hosts/$host/variables
+
+  echo "$(cat $var_file | grep -v "^$field=")" > $var_file
+  log_debug "Unset $field"
+}
+
 function check_roles {
   for role in $(ls -1 $inventory_dir/roles); do
     if [[ ! -e $inventory_dir/roles/$role/modules ]]; then
@@ -468,6 +499,12 @@ case $command in
         ;;
       remove-role)
         host_remove_role $host $subcommand_arg
+        ;;
+      set-variable)
+        host_set_variable $host $subcommand_arg
+        ;;
+      unset-variable)
+        host_unset_variable $host $subcommand_arg
         ;;
       *)
         for host in $command_arg; do
