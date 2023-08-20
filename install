@@ -3,7 +3,7 @@
 set -euo pipefail
 
 function run() {
-  VERSION=1.4.0
+  VERSION="${AVIARY_VERSION:-1.4.0}"
   INSTALL_PATH=/var/lib
   AV_PATH=$INSTALL_PATH/aviary/av
   RELEASE_URL=https://github.com/frameable/aviary.sh/archive/refs/tags/v${VERSION}.tar.gz
