@@ -104,9 +104,8 @@ LSLOG () {
   _LS_FIND_LEVEL_STR $LEVEL
   local OUTPUT
   eval "OUTPUT=\"$_LS_LEVEL_FMT\""
-  # if no message was passed, read it from STDIN
   local _MSG
-  [[ $# -ne 0 ]] && _MSG="$@" || _MSG="$(cat)"
+  [[ $# -ne 0 ]] && _MSG="$@"
   if [[ "$LS_OUTPUT" = "/dev/stdout" ]] ; then
     echo -ne "$_LS_LEVEL_BEGIN$OUTPUT "
     echo -n  "$_MSG"
