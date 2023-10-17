@@ -3,12 +3,13 @@
 set -euo pipefail
 
 function run() {
-  VERSION=1.4.0
+  VERSION="${AVIARY_VERSION:-1.5.0}"
   INSTALL_PATH=/var/lib
   AV_PATH=$INSTALL_PATH/aviary/av
   RELEASE_URL=https://github.com/frameable/aviary.sh/archive/refs/tags/v${VERSION}.tar.gz
   INVENTORY_GIT_URL=${1:-""}
   CONFIG_FILE=${INSTALL_PATH}/aviary/config
+  NO_CRON="${AVIARY_NO_CRON:-false}"
 
   # check for git dependency
   if ! /usr/bin/which git > /dev/null; then
@@ -35,10 +36,12 @@ function run() {
     echo "inventory_git_url=$INVENTORY_GIT_URL" >> $CONFIG_FILE
   fi
 
-  echo Adding entry to /etc/crontab...
-  echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
-  echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> /etc/crontab
-  echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply >> /var/log/aviary.log 2>&1" >> /etc/crontab
+  if [[ "$NO_CRON" != "true" ]]; then
+    echo Adding entry to /etc/crontab...
+    echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
+    echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> /etc/crontab
+    echo "$(( RANDOM % 60 )) * * * * root $AV_PATH apply >> /var/log/aviary.log 2>&1" >> /etc/crontab
+  fi
 
   echo Done
 }
