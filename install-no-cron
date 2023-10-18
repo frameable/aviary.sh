@@ -3,6 +3,8 @@
 set -euo pipefail
 
 function run() {
+  echo "Now you can use \`curl aviary.sh/install | AVIARY_NO_CRON=true bash\` to achieve the same behavior"
+
   VERSION="${AVIARY_VERSION:-1.5.0}"
   INSTALL_PATH=/var/lib
   AV_PATH=$INSTALL_PATH/aviary/av
