@@ -36,7 +36,7 @@ function run() {
     echo "inventory_git_url=$INVENTORY_GIT_URL" >> $CONFIG_FILE
   fi
 
-  if [[ "$NO_CRON" != "true" ]]; then
+  if [[ "$NO_CRON" != "true" ]] && [[ -d "/etc/crontab" ]]; then
     echo Adding entry to /etc/crontab...
     echo "$(cat /etc/crontab | grep -v $AV_PATH)" > /etc/crontab
     echo "* * * * * root $AV_PATH directive >> /var/log/aviary-directive.log 2>&1" >> /etc/crontab
