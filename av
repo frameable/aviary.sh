@@ -307,6 +307,7 @@ function host_set_variable {
   vars_file=$inventory_dir/hosts/$host/variables
 
   mkdir -p $inventory_dir/hosts/$host
+  touch $vars_file
   echo "$(grep -v ^$variable= $vars_file)\n$variable='$value'" > $vars_file
 }
 
@@ -316,6 +317,7 @@ function host_unset_variable {
   vars_file=$inventory_dir/hosts/$host/variables
 
   mkdir -p $inventory_dir/hosts/$host
+  touch $vars_file
   echo "$(grep -v ^$variable=)" > $vars_file
 }
 
