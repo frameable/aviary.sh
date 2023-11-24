@@ -59,13 +59,15 @@ Commands:
   list-roles               List all available roles
 
 Host actions:
-  host <host> [host...]                Show attributes for the host(s)
-  host <host> add                      Add the host to the inventory
-  host <host> remove                   Remove the host from the inventory
-  host <host> add-module <module>      Add the module to the host in the inventory
-  host <host> remove-module <module>   Remove the module from the host in the inventory
-  host <host> add-role <role>          Add the role to the host in the inventory
-  host <host> remove-role <role>       Remove the role from the host in the inventory
+  host <host> [host...]                          Show attributes for the host(s)
+  host <host> add                                Add the host to the inventory
+  host <host> remove                             Remove the host from the inventory
+  host <host> add-module <module>                Add the module to the host in the inventory
+  host <host> remove-module <module>             Remove the module from the host in the inventory
+  host <host> add-role <role>                    Add the role to the host in the inventory
+  host <host> remove-role <role>                 Remove the role from the host in the inventory
+  host <host> set-variable <variable> <value>    Set a variable to some value on this host in the inventory
+  host <host> unset-variable <variable> <value>  Unset a variable to some value on this host in the inventory
 EOF
 }
 
@@ -299,6 +301,25 @@ function host_add_role {
   echo $role >> $roles_file
 }
 
+function host_set_variable {
+  local host=$1
+  local variable=$2
+  local value=$3
+  vars_file=$inventory_dir/hosts/$host/variables
+
+  mkdir -p $inventory_dir/hosts/$host
+  echo "$(grep -v ^$variable= $vars_file)\n$variable='$value'" > $vars_file
+}
+
+function host_unset_variable {
+  local host=$1
+  local variable=$2
+  vars_file=$inventory_dir/hosts/$host/variables
+
+  mkdir -p $inventory_dir/hosts/$host
+  echo "$(grep -v ^$variable=)" > $vars_file
+}
+
 function check_roles {
   for role in $(ls -1 $inventory_dir/roles); do
     if [[ ! -e $inventory_dir/roles/$role/modules ]]; then
@@ -468,6 +489,12 @@ case $command in
         ;;
       remove-role)
         host_remove_role $host $subcommand_arg
+        ;;
+      set-variable)
+        host_set_variable $host $subcommand_arg
+        ;;
+      unset-variable)
+        host_unset_variable $host $subcommand_arg
         ;;
       *)
         for host in $command_arg; do
