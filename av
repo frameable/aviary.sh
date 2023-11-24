@@ -303,8 +303,7 @@ function host_add_role {
 
 function host_set_variable {
   local host=$1
-  local variable=$2
-  local value=$3
+  read variable value<<<$2
   vars_file=$inventory_dir/hosts/$host/variables
 
   mkdir -p $inventory_dir/hosts/$host
