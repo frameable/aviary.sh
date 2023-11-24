@@ -66,8 +66,8 @@ Host actions:
   host <host> remove-module <module>   Remove the module from the host in the inventory
   host <host> add-role <role>          Add the role to the host in the inventory
   host <host> remove-role <role>       Remove the role from the host in the inventory
-  host diff                            See what has changed in the local inventory
-  host push                            Push local inventory changes up to the git origin
+  host <host> diff                     See what has changed in the local inventory
+  host <host> push                     Push local inventory changes up to the git origin
 EOF
 }
 
